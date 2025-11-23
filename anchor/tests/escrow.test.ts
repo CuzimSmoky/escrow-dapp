@@ -1,55 +1,73 @@
-import {
-  Blockhash,
-  createSolanaClient,
-  createTransaction,
-  Instruction,
-  KeyPairSigner,
-  signTransactionMessageWithSigners,
-} from 'gill'
-import { getGreetInstruction } from '../src'
-// @ts-ignore error TS2307 suggest setting `moduleResolution` but this is already configured
-import { loadKeypairSignerFromFile } from 'gill/node'
+import * as anchor from '@coral-xyz/anchor'
+import { Program } from '@coral-xyz/anchor'
+import { Escrow } from '../target/types/escrow'
+import { LAMPORTS_PER_SOL, PublicKey, Connection } from '@solana/web3.js'
+import assert from 'assert'
+import BN from 'bn.js'
 
-const { rpc, sendAndConfirmTransaction } = createSolanaClient({ urlOrMoniker: process.env.ANCHOR_PROVIDER_URL! })
 describe('escrow', () => {
-  let payer: KeyPairSigner
+  anchor.setProvider(anchor.AnchorProvider.env())
 
-  beforeAll(async () => {
-    payer = await loadKeypairSignerFromFile(process.env.ANCHOR_WALLET!)
+  const program = anchor.workspace.escrow as Program<Escrow>
+  const payer = anchor.web3.Keypair.generate()
+  const recipient = anchor.web3.Keypair.generate()
+  const unauthorizedUser = anchor.web3.Keypair.generate()
+
+  it('Airdrop SOL to all test accounts', async () => {
+    await airdrop(program.provider.connection, payer.publicKey, 5 * LAMPORTS_PER_SOL)
+    await airdrop(program.provider.connection, recipient.publicKey, 5 * LAMPORTS_PER_SOL)
+    await airdrop(program.provider.connection, unauthorizedUser.publicKey, 5 * LAMPORTS_PER_SOL)
   })
 
-  it('should run the program and print "GM!" to the transaction log', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getGreetInstruction()
+  describe('Initialize Vault', () => {
+    it('Should initialize vault successfully', async () => {
+      const paymentId = new BN(1)
+      const amount = new BN(0.5 * LAMPORTS_PER_SOL)
 
-    // ACT
-    const sx = await sendAndConfirm({ ix, payer })
+      await initializeVault(program, payer, recipient.publicKey, amount, paymentId)
 
-    // ASSERT
-    expect(sx).toBeDefined()
-    console.log('Transaction signature:', sx)
+      const vaultPda = getVaultPda(program, paymentId)[0]
+      const vaultAccount = await program.account.vault.fetch(vaultPda)
+
+      assert.equal(vaultAccount.paymentId.toString(), paymentId.toString())
+      assert.equal(vaultAccount.payer.toString(), payer.publicKey.toString())
+      assert.equal(vaultAccount.recipient.toString(), recipient.publicKey.toString())
+      assert.equal(vaultAccount.amountInLamports.toString(), amount.toString())
+      assert.equal(vaultAccount.status, 0) // Initial status
+    })
   })
 })
 
-// Helper function to keep the tests DRY
-let latestBlockhash: Awaited<ReturnType<typeof getLatestBlockhash>> | undefined
-async function getLatestBlockhash(): Promise<Readonly<{ blockhash: Blockhash; lastValidBlockHeight: bigint }>> {
-  if (latestBlockhash) {
-    return latestBlockhash
-  }
-  return await rpc
-    .getLatestBlockhash()
-    .send()
-    .then(({ value }) => value)
+// HELPERS
+
+async function airdrop(connection: Connection, address: PublicKey, amount: number = 1000 * LAMPORTS_PER_SOL) {
+  await connection.confirmTransaction(await connection.requestAirdrop(address, amount), 'confirmed')
 }
-async function sendAndConfirm({ ix, payer }: { ix: Instruction; payer: KeyPairSigner }) {
-  const tx = createTransaction({
-    feePayer: payer,
-    instructions: [ix],
-    version: 'legacy',
-    latestBlockhash: await getLatestBlockhash(),
-  })
-  const signedTransaction = await signTransactionMessageWithSigners(tx)
-  return await sendAndConfirmTransaction(signedTransaction)
+
+async function initializeVault(
+  program: Program<Escrow>,
+  payer: anchor.web3.Keypair,
+  recipient: PublicKey,
+  amountInLamports: BN,
+  paymentId: BN,
+) {
+  const [vaultPda] = getVaultPda(program, paymentId)
+
+  await program.methods
+    .initialize(amountInLamports, paymentId)
+    .accounts({
+      payer: payer.publicKey,
+      recipient,
+      vault: vaultPda,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers([payer])
+    .rpc()
+}
+
+function getVaultPda(program: Program<Escrow>, paymentId: BN): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('payment'), Buffer.from(paymentId.toArray('le', 8))],
+    program.programId,
+  )
 }
