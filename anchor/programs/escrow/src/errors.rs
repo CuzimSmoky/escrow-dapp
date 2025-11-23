@@ -10,4 +10,8 @@ pub enum MicropayError {
     UnauthorizedRefund,
     #[msg("Invalid payment status for this operation")]
     InvalidStatus,
+    #[msg("This user is not authorized to use this instruction")]
+    Unauthorized,
+    #[msg("Invalid recipient provided")]
+    InvalidRecipient,
 }

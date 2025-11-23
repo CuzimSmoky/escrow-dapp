@@ -18,4 +18,10 @@ pub mod escrow {
     ) -> Result<()> {
         instructions::initialize::initialize(context, amount_in_lamports, payment_id)
     }
+
+    pub fn payout(
+        context: Context<PayoutVault>,
+    ) -> Result<()> {
+        instructions::payout::payout(context)
+    }
 }

@@ -17,10 +17,10 @@ pub fn initialize(context: Context<InitializeVault>, amount_in_lamports: u64, pa
     vault.amount_in_lamports = amount_in_lamports;
     vault.payment_id = payment_id;
     vault.bump = context.bumps.vault;
-    
+
 
     // Creating instruction which is used for the cross program invocation
-    let payment_instruction = anchor_lang::solana_program::system_instruction::transfer(&payer.key, &vault.key(), amount_in_lamports);
+    let payment_instruction = anchor_lang::solana_program::system_instruction::transfer(&payer.key(), &vault.key(), amount_in_lamports);
 
     anchor_lang::solana_program::program::invoke(&payment_instruction, &[payer.to_account_info(), vault.to_account_info()])?;
     Ok(())
