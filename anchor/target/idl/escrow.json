@@ -1,5 +1,5 @@
 {
-  "address": "JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H",
+  "address": "9XFM9Jc7NzDqoqma8BmtdFvRHmhsfLSQ5LRfP6JXvA3x",
   "metadata": {
     "name": "escrow",
     "version": "0.1.0",
@@ -53,6 +53,33 @@
           }
         },
         {
+          "name": "token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "payment_id"
+              }
+            ]
+          }
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -67,6 +94,91 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "payout",
+      "discriminator": [
+        149,
+        140,
+        194,
+        236,
+        174,
+        189,
+        6,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.payment_id",
+                "account": "Vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.payment_id",
+                "account": "Vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -104,6 +216,16 @@
       "code": 6003,
       "name": "InvalidStatus",
       "msg": "Invalid payment status for this operation"
+    },
+    {
+      "code": 6004,
+      "name": "Unauthorized",
+      "msg": "This user is not authorized to use this instruction"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidRecipient",
+      "msg": "Invalid recipient provided"
     }
   ],
   "types": [
@@ -121,12 +243,12 @@
             "type": "pubkey"
           },
           {
-            "name": "recipient",
-            "type": "pubkey"
-          },
-          {
             "name": "amount_in_lamports",
             "type": "u64"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
           },
           {
             "name": "status",
@@ -134,6 +256,10 @@
           },
           {
             "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "token_vault_bump",
             "type": "u8"
           }
         ]

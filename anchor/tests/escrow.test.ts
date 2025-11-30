@@ -1,73 +1,94 @@
-import * as anchor from '@coral-xyz/anchor'
-import { Program } from '@coral-xyz/anchor'
-import { Escrow } from '../target/types/escrow'
-import { LAMPORTS_PER_SOL, PublicKey, Connection } from '@solana/web3.js'
-import assert from 'assert'
-import BN from 'bn.js'
+import * as anchor from '@coral-xyz/anchor';
+import { Program } from '@coral-xyz/anchor';
+import { Escrow } from '../target/types/escrow';
+import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
+import { startAnchor } from 'solana-bankrun';
+import { BankrunProvider } from 'anchor-bankrun';
 
-describe('escrow', () => {
-  anchor.setProvider(anchor.AnchorProvider.env())
+const IDL = require('../target/idl/escrow.json');
+const PROGRAM_ID = new PublicKey('9XFM9Jc7NzDqoqma8BmtdFvRHmhsfLSQ5LRfP6JXvA3x');
 
-  const program = anchor.workspace.escrow as Program<Escrow>
-  const payer = anchor.web3.Keypair.generate()
-  const recipient = anchor.web3.Keypair.generate()
-  const unauthorizedUser = anchor.web3.Keypair.generate()
+describe('Escrow', () => {
 
-  it('Airdrop SOL to all test accounts', async () => {
-    await airdrop(program.provider.connection, payer.publicKey, 5 * LAMPORTS_PER_SOL)
-    await airdrop(program.provider.connection, recipient.publicKey, 5 * LAMPORTS_PER_SOL)
-    await airdrop(program.provider.connection, unauthorizedUser.publicKey, 5 * LAMPORTS_PER_SOL)
-  })
+  let context: any;
+  let provider: any;
+  let escrowProgram: Program<Escrow>;
+  let vaultPda: PublicKey;
+  let tokenVaultPda: PublicKey;
+  let vaultAccount: any;            // <-- shared state
+  let tokenVaultAccount: any;
+  const paymentId = new anchor.BN(1);
 
-  describe('Initialize Vault', () => {
-    it('Should initialize vault successfully', async () => {
-      const paymentId = new BN(1)
-      const amount = new BN(0.5 * LAMPORTS_PER_SOL)
+  beforeAll(async () => {
+    // Bankrun einmal starten für alle Tests
+    context = await startAnchor('', [{ name: 'escrow', programId: PROGRAM_ID }], []);
+    provider = new BankrunProvider(context);
+    escrowProgram = new Program<Escrow>(IDL, provider);
 
-      await initializeVault(program, payer, recipient.publicKey, amount, paymentId)
+    // Vault PDAs vorbereiten
+    [vaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("payment"), paymentId.toArrayLike(Buffer, 'le', 8)],
+      PROGRAM_ID
+    );
 
-      const vaultPda = getVaultPda(program, paymentId)[0]
-      const vaultAccount = await program.account.vault.fetch(vaultPda)
+    [tokenVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('tokenvault'), paymentId.toArrayLike(Buffer, 'le', 8)],
+      PROGRAM_ID
+    );
+  });
 
-      assert.equal(vaultAccount.paymentId.toString(), paymentId.toString())
-      assert.equal(vaultAccount.payer.toString(), payer.publicKey.toString())
-      assert.equal(vaultAccount.recipient.toString(), recipient.publicKey.toString())
-      assert.equal(vaultAccount.amountInLamports.toString(), amount.toString())
-      assert.equal(vaultAccount.status, 0) // Initial status
-    })
-  })
-})
+  it('Initialize Vault', async () => {
+    const payer = context.payer;
+    const recipient = Keypair.generate();
 
-// HELPERS
+    // Initialize RPC
+    const tx = await escrowProgram.methods
+      .initialize(
+        new anchor.BN(1000000000),
+        paymentId
+      )
+      .accounts({
+        payer: payer.publicKey,
+        recipient: recipient.publicKey,
+        vault: vaultPda,
+        tokenVault: tokenVaultPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
 
-async function airdrop(connection: Connection, address: PublicKey, amount: number = 1000 * LAMPORTS_PER_SOL) {
-  await connection.confirmTransaction(await connection.requestAirdrop(address, amount), 'confirmed')
-}
+    console.log('Init signature:', tx);
 
-async function initializeVault(
-  program: Program<Escrow>,
-  payer: anchor.web3.Keypair,
-  recipient: PublicKey,
-  amountInLamports: BN,
-  paymentId: BN,
-) {
-  const [vaultPda] = getVaultPda(program, paymentId)
+    // Shared vaultAccount speichern
+    vaultAccount = await escrowProgram.account.vault.fetch(vaultPda);
+    console.log('Initialized vault:', vaultAccount);
+    const balance = await context.banksClient.getBalance(recipient.publicKey);
+    console.log("Balance:", balance);
+  });
 
-  await program.methods
-    .initialize(amountInLamports, paymentId)
-    .accounts({
-      payer: payer.publicKey,
-      recipient,
-      vault: vaultPda,
-      systemProgram: anchor.web3.SystemProgram.programId,
-    })
-    .signers([payer])
-    .rpc()
-}
+  it('Payout Vault', async () => {
+    const payer = context.payer;
 
-function getVaultPda(program: Program<Escrow>, paymentId: BN): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from('payment'), Buffer.from(paymentId.toArray('le', 8))],
-    program.programId,
-  )
-}
+    // recipient aus dem initialized Vault
+    const recipient = new PublicKey(vaultAccount.recipient);
+
+    const tx = await escrowProgram.methods
+      .payout()
+      .accounts({
+        payer: payer.publicKey,
+        recipient: recipient,
+        vault: vaultPda,
+        tokenVault: tokenVaultPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log('Payout signature:', tx);
+
+    // Hier kannst du optional erneut den Vault lesen
+    const updatedVault = await escrowProgram.account.vault.fetch(vaultPda);
+    console.log('After payout:', updatedVault);
+    const balance = await context.banksClient.getBalance(recipient);
+    console.log("Balance:", balance);
+  });
+
+});

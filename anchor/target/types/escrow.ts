@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/escrow.json`.
  */
 export type Escrow = {
-  "address": "JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H",
+  "address": "9XFM9Jc7NzDqoqma8BmtdFvRHmhsfLSQ5LRfP6JXvA3x",
   "metadata": {
     "name": "escrow",
     "version": "0.1.0",
@@ -59,6 +59,33 @@ export type Escrow = {
           }
         },
         {
+          "name": "tokenVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "paymentId"
+              }
+            ]
+          }
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -73,6 +100,91 @@ export type Escrow = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "payout",
+      "discriminator": [
+        149,
+        140,
+        194,
+        236,
+        174,
+        189,
+        6,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.payment_id",
+                "account": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.payment_id",
+                "account": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -110,6 +222,16 @@ export type Escrow = {
       "code": 6003,
       "name": "invalidStatus",
       "msg": "Invalid payment status for this operation"
+    },
+    {
+      "code": 6004,
+      "name": "unauthorized",
+      "msg": "This user is not authorized to use this instruction"
+    },
+    {
+      "code": 6005,
+      "name": "invalidRecipient",
+      "msg": "Invalid recipient provided"
     }
   ],
   "types": [
@@ -127,12 +249,12 @@ export type Escrow = {
             "type": "pubkey"
           },
           {
-            "name": "recipient",
-            "type": "pubkey"
-          },
-          {
             "name": "amountInLamports",
             "type": "u64"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
           },
           {
             "name": "status",
@@ -140,6 +262,10 @@ export type Escrow = {
           },
           {
             "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "tokenVaultBump",
             "type": "u8"
           }
         ]

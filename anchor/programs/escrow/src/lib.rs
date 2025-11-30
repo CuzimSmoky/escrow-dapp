@@ -5,7 +5,7 @@ pub mod state;
 pub mod errors;
 
 pub use instructions::*;
-declare_id!("JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H");
+declare_id!("9XFM9Jc7NzDqoqma8BmtdFvRHmhsfLSQ5LRfP6JXvA3x");
 
 #[program]
 pub mod escrow {
