@@ -24,4 +24,9 @@ pub mod escrow {
     ) -> Result<()> {
         instructions::payout::payout(context)
     }
+        pub fn close(
+        context: Context<CloseVault>,
+    ) -> Result<()> {
+        instructions::close::close(context)
+    }
 }

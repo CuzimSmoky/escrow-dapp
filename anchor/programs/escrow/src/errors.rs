@@ -14,4 +14,6 @@ pub enum MicropayError {
     Unauthorized,
     #[msg("Invalid recipient provided")]
     InvalidRecipient,
+    #[msg("Closing of the account has been refused: Balance has not been paid out yet")]
+    InvalidClose,
 }

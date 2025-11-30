@@ -14,6 +14,56 @@ export type Escrow = {
   },
   "instructions": [
     {
+      "name": "close",
+      "discriminator": [
+        98,
+        165,
+        201,
+        177,
+        108,
+        65,
+        206,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.payment_id",
+                "account": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize",
       "discriminator": [
         175,
@@ -232,6 +282,11 @@ export type Escrow = {
       "code": 6005,
       "name": "invalidRecipient",
       "msg": "Invalid recipient provided"
+    },
+    {
+      "code": 6006,
+      "name": "invalidClose",
+      "msg": "Closing of the account has been refused: Balance has not been paid out yet"
     }
   ],
   "types": [
