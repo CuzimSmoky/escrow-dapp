@@ -22,7 +22,7 @@ export default function EscrowFeature() {
 
   return (
     <div>
-      <AppHero title="Escrow" subtitle={'Run the program by clicking the "Run program" button.'}>
+      <AppHero title="Escrow" subtitle={'Program Address'}>
         <p className="mb-6">
           <EscrowUiProgramExplorerLink />
         </p>

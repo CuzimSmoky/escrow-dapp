@@ -1,5 +1,5 @@
 import { WalletButton } from '../solana/solana-provider'
-import { EscrowProgram, EscrowProgramExplorerLink } from './escrow-ui'
+import { EscrowProgram, EscrowProgramExplorerLink, EscrowList } from './escrow-ui'
 import { AppHero } from '../app-hero'
 import { useWalletUi } from '@wallet-ui/react'
 
@@ -23,6 +23,7 @@ export default function EscrowFeature() {
 			<AppHero title="Escrow Manager" subtitle={'Start by clicking "Create Escrow" or manage previous created escrows'}>
 			</AppHero>
 			<EscrowProgram />
+			<EscrowList />
 		</div>
 	)
 }
