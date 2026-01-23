@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/escrow.json`.
  */
 export type Escrow = {
-  "address": "9XFM9Jc7NzDqoqma8BmtdFvRHmhsfLSQ5LRfP6JXvA3x",
+  "address": "HrJfUnaaaMq5MDPCurbihMuHvWc38TRLR83P68CdGm5E",
   "metadata": {
     "name": "escrow",
     "version": "0.1.0",

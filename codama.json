@@ -1,0 +1,12 @@
+{
+    "idl": "anchor/target/idl/escrow.json",
+    "before": [],
+    "scripts": {
+        "js": {
+            "from": "@codama/renderers-js",
+            "args": [
+                "anchor/src/client/js/generated"
+            ]
+        }
+    }
+}

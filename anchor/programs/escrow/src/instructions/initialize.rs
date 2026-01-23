@@ -1,62 +1,99 @@
-    use anchor_lang::{prelude::*, solana_program::native_token::sol_to_lamports};
-    use crate::state::{Vault};
-    use crate::errors::*;
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{
+    system_instruction,
+    program::invoke,
+    rent::Rent,
+    sysvar::Sysvar,
+};
 
-    pub fn initialize(context: Context<InitializeVault>, amount_in_lamports: u64, payment_id: u64) -> Result<()> {
+use crate::state::Vault;
+use crate::errors::*;
 
-        // Check that amount is greater than zero
-        require!(amount_in_lamports > 0, MicropayError::InsufficientFunds);
-        
-        // Creating local variables from the context
-        let payer = &context.accounts.payer;
+pub fn initialize(
+    ctx: Context<InitializeVault>,
+    amount_in_lamports: u64,
+    payment_id: u64,
+) -> Result<()> {
+    
+    require!(amount_in_lamports > 0, MicropayError::InsufficientFunds);
 
-        let token_vault = &context.accounts.token_vault;
+    let payer = &ctx.accounts.payer;
+    let token_vault = &ctx.accounts.token_vault;
+    let system_program = &ctx.accounts.system_program;
 
-        // Initializing the PaymentAccount
-        let vault = &mut context.accounts.vault;
-        vault.payer = payer.key();
-        vault.recipient = context.accounts.recipient.key();
-        vault.amount_in_lamports = amount_in_lamports;
-        vault.payment_id = payment_id;
-        vault.bump = context.bumps.vault;
-        vault.token_vault_bump = context.bumps.token_vault;
+    if token_vault.lamports() == 0 {
+        let rent = Rent::get()?;
+        let lamports_required = rent.minimum_balance(0);
 
-        let system_program = &context.accounts.system_program;
+        let create_ix = system_instruction::create_account(
+            &payer.key(),
+            &token_vault.key(),
+            lamports_required,
+            0, // keine Daten, nur Lamports
+            &system_program.key(),
+        );
 
+        let payment_id_bytes = payment_id.to_le_bytes();
+        let bump = ctx.bumps.token_vault;
+        let signer_seeds: &[&[u8]] = &[b"tokenvault", &payment_id_bytes, &[bump]];
+        let signer_seeds_slice: &[&[&[u8]]] = &[signer_seeds];
 
-        // Creating instruction which is used for the cross program invocation
-        let payment_instruction = anchor_lang::solana_program::system_instruction::transfer(&payer.key(), &token_vault.key(), amount_in_lamports);
-
-        anchor_lang::solana_program::program::invoke(&payment_instruction, &[payer.to_account_info(), token_vault.to_account_info(), system_program.to_account_info()])?;
-        Ok(())
-    }
-
-    #[derive(Accounts)]
-    #[instruction(amount_in_lamports: u64,  payment_id: u64)]
-    pub struct InitializeVault<'info> {
-
-        #[account(mut)]
-        pub payer: Signer<'info>,
-
-        pub recipient: SystemAccount<'info>,
-
-        #[account(
-            init,
-            seeds = [b"payment",
-                payment_id.to_le_bytes().as_ref()
+        anchor_lang::solana_program::program::invoke_signed(
+            &create_ix,
+            &[
+                payer.to_account_info(),
+                token_vault.to_account_info(),
+                system_program.to_account_info(),
             ],
-            bump,
-            payer = payer,
-            space = 8 + Vault::INIT_SPACE,
-        )]
-        pub vault: Account<'info, Vault>,
-
-        #[account(
-            mut,
-            seeds = [b"tokenvault", payment_id.to_le_bytes().as_ref(),],
-            bump,
-        )]
-        pub token_vault: SystemAccount<'info>,
-
-        pub system_program: Program<'info, System>,
+            signer_seeds_slice,
+        )?;
     }
+
+    let transfer_ix = system_instruction::transfer(
+        &payer.key(),
+        &token_vault.key(),
+        amount_in_lamports,
+    );
+
+    invoke(
+        &transfer_ix,
+        &[
+            payer.to_account_info(),
+            token_vault.to_account_info(),
+            system_program.to_account_info(),
+        ],
+    )?;
+
+    let vault = &mut ctx.accounts.vault;
+    vault.payer = payer.key();
+    vault.recipient = ctx.accounts.recipient.key();
+    vault.amount_in_lamports = amount_in_lamports;
+    vault.payment_id = payment_id;
+    vault.bump = ctx.bumps.vault;
+    vault.token_vault_bump = ctx.bumps.token_vault;
+
+    Ok(())
+}
+
+#[derive(Accounts)]
+#[instruction(amount_in_lamports: u64, payment_id: u64)]
+pub struct InitializeVault<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub recipient: SystemAccount<'info>,
+
+    #[account(
+        init,
+        seeds = [b"payment", payment_id.to_le_bytes().as_ref()],
+        bump,
+        payer = payer,
+        space = 8 + Vault::INIT_SPACE,
+    )]
+    pub vault: Account<'info, Vault>,
+
+    #[account(mut, seeds = [b"tokenvault", payment_id.to_le_bytes().as_ref()], bump)]
+    pub token_vault: SystemAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}

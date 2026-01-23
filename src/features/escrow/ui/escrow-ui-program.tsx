@@ -17,7 +17,7 @@ export function EscrowUiProgram() {
   }
   return (
     <div className={'space-y-6'}>
-      <pre>{JSON.stringify(query.data.value.data, null, 2)}</pre>
+      {/* Program account loaded. Customize display as needed. */}
     </div>
   )
 }
