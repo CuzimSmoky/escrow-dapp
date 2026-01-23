@@ -14,7 +14,7 @@ This repository contains a full-stack decentralized escrow application built on 
 
 - Create new escrow accounts on Solana
 - View all active escrows with details (address, payer, recipient, amount, status)
-- Withdraw funds (recipient)
+- Withdraw funds (payer)
 - Close escrow accounts (payer)
 - Real-time UI updates and transaction feedback
 - Fully themeable (light/dark mode)
