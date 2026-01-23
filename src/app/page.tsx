@@ -1,5 +1,7 @@
-import DashboardFeature from '@/features/dashboard/dashboard-feature'
+
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return <DashboardFeature />
+  redirect('/escrow');
+  return null;
 }

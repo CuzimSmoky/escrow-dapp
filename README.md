@@ -1,13 +1,25 @@
-# escrow
 
-This is a Next.js app containing:
+# Solana Escrow dApp
 
-- Tailwind and Shadcn UI for styling
-- [Gill](https://gill.site/) Solana SDK
-- Shadcn [Wallet UI](https://registry.wallet-ui.dev) components
-- A basic Greeter Solana program written in Anchor
-- [codama](https://github.com/codama-idl/codama) to generate a JS sdk for the program
-- UI components for interacting with the program
+This repository contains a full-stack decentralized escrow application built on Solana. It features:
+
+- **Anchor smart contract** for secure escrow logic on-chain
+- **Next.js frontend** for a modern, responsive UI
+- **Tailwind CSS & Shadcn UI** for Apple-inspired design and theme support (light/dark mode)
+- **Gill Solana SDK** for seamless blockchain integration
+- **Wallet UI** for easy wallet connection and transaction signing
+- **Codama** for auto-generating TypeScript/JS client SDKs from Anchor IDL
+
+## Features
+
+- Create new escrow accounts on Solana
+- View all active escrows with details (address, payer, recipient, amount, status)
+- Withdraw funds (recipient)
+- Close escrow accounts (payer)
+- Real-time UI updates and transaction feedback
+- Fully themeable (light/dark mode)
+
+## Getting Started
 
 ## Getting Started
 
@@ -25,16 +37,17 @@ npx create-solana-dapp@latest -t gh:solana-foundation/templates/gill/escrow
 npm install
 ```
 
-## Apps
 
-### anchor
+## Structure
 
-This is a Solana program written in Rust using the Anchor framework.
+- `anchor/` — Rust smart contract (Anchor)
+- `src/` — Next.js React frontend
+- `public/` — Static assets
+- `test-ledger/` — Local validator/test data
 
-#### Commands
+## Anchor Program
 
-You can use any normal anchor commands. Either move to the `anchor` directory and run the `anchor` command or prefix the
-command with `npm run`, eg: `npm run anchor`.
+The escrow logic is implemented in Rust using Anchor. You can build, test, and deploy using standard Anchor commands (see below).
 
 #### Sync the program id:
 
@@ -70,9 +83,10 @@ npm run anchor-test
 npm run anchor deploy --provider.cluster devnet
 ```
 
-### web
 
-This is a React app that uses the Anchor generated client to interact with the Solana program.
+## Frontend (Next.js)
+
+The web app uses the Anchor-generated client to interact with the Solana escrow program. It provides a user-friendly interface for managing escrows.
 
 #### Commands
 
@@ -81,6 +95,7 @@ Start the app
 ```shell
 npm run dev
 ```
+
 
 Build the app
 
